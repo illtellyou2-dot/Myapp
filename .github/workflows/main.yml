@@ -1,0 +1,37 @@
+name: NTXA Auto Signer
+
+on:
+  workflow_dispatch:
+    inputs:
+      ipa_url:
+        description: 'رابط ملف الـ IPA الخام'
+        required: true
+
+jobs:
+  sign:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare Certificates
+        run: |
+          echo "${{ secrets.P12_BASE64 }}" | base64 --decode > cert.p12
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
+          
+      - name: Install zsign
+        run: brew install zsign
+
+      - name: Download and Sign
+        run: |
+          curl -L "${{ github.event.inputs.ipa_url }}" -o original.ipa
+          zsign -k cert.p12 -p "${{ secrets.P12_PASSWORD }}" -m profile.mobileprovision -o signed_ntxa.ipa original.ipa
+
+      - name: Create Release and Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: signed_ntxa.ipa
+          tag_name: v${{ github.run_number }}
+          name: "NTXA Signed Release #${{ github.run_number }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
