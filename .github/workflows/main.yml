@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       ipa_url:
-        description: 'رابط الـ IPA'
+        description: 'Direct IPA Link'
         required: true
 
 jobs:
@@ -19,12 +19,15 @@ jobs:
       - name: Install zsign
         run: brew install zsign
 
-      - name: Process App
+      - name: Sign Process
         run: |
-          # تحميل الملف
+          # 1. تحميل الملف
           curl -L "${{ github.event.inputs.ipa_url }}" -o original.ipa
           
-          # التوقيع
+          # 2. التأكد من وجود الملفات (عشان ما يعطي 255)
+          ls -l
+          
+          # 3. محاولة التوقيع مع طباعة التفاصيل
           zsign -k cert.p12 -p "${{ secrets.P12_PASSWORD }}" -m profile.mobileprovision -o signed_ntxa.ipa original.ipa
 
       - name: Release
@@ -36,10 +39,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Link
+      - name: Get Direct Link
+        if: success()
         run: |
           IPA_RAW="https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/signed_ntxa.ipa"
           echo "--------------------------------------------------"
-          echo "انسخ الرابط التالي وافتحه في Safari للتثبيت المباشر:"
+          echo "رابط التثبيت المباشر (Safari):"
           echo "itms-services://?action=download-manifest&url=https://plist-service.vercel.app/plist?url=$IPA_RAW"
           echo "--------------------------------------------------"
