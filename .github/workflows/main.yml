@@ -4,21 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       ipa_url:
-        description: 'رابط ملف الـ IPA الخام'
+        description: 'رابط ملف الـ IPA المباشر'
         required: true
 
 jobs:
   sign:
     runs-on: macos-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Prepare Certificates
-        run: |
-          echo "${{ secrets.P12_BASE64 }}" | base64 --decode > cert.p12
-          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > profile.mobileprovision
-          
       - name: Install zsign
         run: brew install zsign
 
@@ -35,3 +30,15 @@ jobs:
           name: "NTXA Signed Release #${{ github.run_number }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Install Link
+        run: |
+          IPA_URL="https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/signed_ntxa.ipa"
+          echo "INSTALL_LINK=itms-services://?action=download-manifest&url=https://plist-service.vercel.app/plist?url=$IPA_URL" >> $GITHUB_ENV
+
+      - name: Display Install Link
+        run: |
+          echo "--------------------------------------------------"
+          echo "رابط التثبيت المباشر هو:"
+          echo "${{ env.INSTALL_LINK }}"
+          echo "--------------------------------------------------"
