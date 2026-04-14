@@ -4,15 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       ipa_url:
-        description: 'رابط ملف الـ IPA المباشر'
+        description: 'Direct IPA Link'
         required: true
 
 jobs:
   sign:
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install zsign
         run: brew install zsign
@@ -22,8 +24,8 @@ jobs:
           curl -L "${{ github.event.inputs.ipa_url }}" -o original.ipa
           zsign -k cert.p12 -p "${{ secrets.P12_PASSWORD }}" -m profile.mobileprovision -o signed_ntxa.ipa original.ipa
 
-      - name: Create Release and Upload
-        uses: softprops/action-gh-release@v1
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
         with:
           files: signed_ntxa.ipa
           tag_name: v${{ github.run_number }}
@@ -31,14 +33,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Install Link
+      - name: Get Direct Link
         run: |
-          IPA_URL="https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/signed_ntxa.ipa"
-          echo "INSTALL_LINK=itms-services://?action=download-manifest&url=https://plist-service.vercel.app/plist?url=$IPA_URL" >> $GITHUB_ENV
-
-      - name: Display Install Link
-        run: |
+          IPA_RAW="https://github.com/${{ github.repository }}/releases/download/v${{ github.run_number }}/signed_ntxa.ipa"
+          PLIST_LINK="https://plist-service.vercel.app/plist?url=$IPA_RAW"
           echo "--------------------------------------------------"
-          echo "رابط التثبيت المباشر هو:"
-          echo "${{ env.INSTALL_LINK }}"
+          echo "رابط التثبيت المباشر (انسخه وافتحه في سفاري):"
+          echo "itms-services://?action=download-manifest&url=$PLIST_LINK"
           echo "--------------------------------------------------"
